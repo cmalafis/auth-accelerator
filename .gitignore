@@ -1,0 +1,4 @@
+out/
+*.kubeconfig
+auth-accelerator
+/dist/

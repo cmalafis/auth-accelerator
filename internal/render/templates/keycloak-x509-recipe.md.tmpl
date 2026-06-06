@@ -1,0 +1,35 @@
+# RHBK / Keycloak smart-card (x509) recipe — {{ .Date }}
+
+Identity provider: **{{ .Env.IDP }}** · Smart card: **{{ .Env.SmartCard }}** · PKI: **{{ .Env.PKI }}**
+
+The smart-card authentication happens entirely at the IdP. OpenShift then trusts
+the tokens it issues via the generated `authentication-cr.yaml`.
+
+## 1. Mutual TLS / ingress
+RHBK must terminate client-certificate mTLS itself, so expose it through
+**passthrough ingress** (not edge/reencrypt at the router).
+
+## 2. Trust the {{ .Env.PKI }} PKI
+Import the full chain (root + intermediates) into the realm truststore so the
+authenticator can validate presented client certificates.
+
+## 3. Browser flow
+Duplicate the realm's `browser` flow and add an **X509/Validate Username Form**
+execution set to **Alternative**, with certificate-validity checking enabled.
+
+## 4. Certificate → user mapping
+{{ .Env.IDP }} does not auto-provision identities. Map the certificate identity to
+an existing user attribute that backs `{{ .Env.UsernameClaim }}`:
+{{- if eq .Env.SmartCard "cac" }}
+- For **CAC**, read the **EDIPI/UPN from the certificate SAN**, not the Subject CN.
+{{- else }}
+- Map the appropriate SAN field (or CN) to the user attribute.
+{{- end }}
+- Group source for this deployment: **{{ .Env.GroupSource }}**.
+
+## 5. OIDC clients
+- Confidential client `{{ .Env.ConsoleClientID }}` — redirect `https://<console>/auth/callback`.
+- Public client `{{ .Env.CLIClientID }}` — redirect `http://localhost:8080`.
+- Ensure both are emitted in the `{{ .Env.GroupsClaim }}` and `{{ .Env.UsernameClaim }}` claims.
+
+> Issuer URL wired into OpenShift: `{{ .Env.IssuerURL }}`

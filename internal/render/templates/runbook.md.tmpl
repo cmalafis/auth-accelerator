@@ -1,0 +1,35 @@
+# Runbook — {{ .Pattern.Title }}
+
+Generated {{ .Date }} by auth-accelerator · pattern `{{ .Pattern.ID }}` · integration `{{ .Pattern.OCPIntegration }}` (OCP {{ .Pattern.MinOCPVersion }}+)
+
+## ⚠️ Break-glass first
+```
+{{ .Pattern.BreakGlass }}
+```
+
+## Prerequisites
+{{ range .Pattern.Prereqs }}- {{ . }}
+{{ end }}
+## Steps
+{{ range $i, $s := .Pattern.Steps }}{{ add1 $i }}. {{ $s }}
+{{ end }}
+### Key commands
+```
+# Create the issuer CA bundle configmap (DoD PKI chain):
+oc create configmap {{ .Env.CABundleConfigMap }} \
+  --from-file=ca-bundle.crt=dod-pki-chain.crt -n openshift-config
+
+# Apply the generated Authentication CR:
+oc apply -f authentication-cr.yaml
+
+# Watch the rollout:
+oc get authentication.config/cluster -o jsonpath='{.spec.type}{"\n"}'   # -> OIDC
+oc get clusteroperator kube-apiserver
+
+# Validate with a CAC inserted:
+oc login   # uses the oc-oidc exec plugin against {{ .Env.IssuerURL }}
+```
+
+## Gotchas (read before you start)
+{{ range .Pattern.Gotchas }}- {{ . }}
+{{ end }}
