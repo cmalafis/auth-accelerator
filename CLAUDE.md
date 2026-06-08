@@ -11,18 +11,31 @@ the `Authentication` CR, an IdP recipe, a runbook, and an ADR.
 ## Scope decisions (don't relitigate)
 - **OCP 4.20+ only.** External/direct OIDC is GA there, so the only integration path is the
   `Authentication` CR (`type: OIDC`, `oidcProviders`). No legacy OAuth-server branch.
-- The smart-card x509 validation lives at the **IdP** (RHBK/Keycloak, Entra, Okta…); OpenShift
-  just consumes the IdP's OIDC tokens.
+- The smart-card x509/CBA validation lives at the **IdP**; OpenShift just consumes the IdP's
+  OIDC tokens.
+- **Supported IdPs (each a catalog pattern):** RHBK/Keycloak (x509), Okta (CBA), Microsoft
+  Entra ID (CBA), PingFederate (X.509 Integration Kit). All validate PIV/CAC at the IdP.
+- **Google is intentionally NOT a pattern** — no OIDC-native PIV path (its smart-card story is
+  SAML + middleware; `accounts.google.com` doesn't validate certs). ADFS dropped; PingOne
+  (SaaS) deferred. See memory `google-idp-excluded`.
 
 ## Architecture
 ```
-main.go              stdlib flag CLI (to be replaced by cobra)
-internal/env         Environment struct, defaults, validation, stdlib Prompt (-> huh)
-internal/catalog     AuthPattern[] — THE IP. Knowledge base of topologies.
+main.go              thin entrypoint: cmd.Execute()
+cmd/                 cobra CLI — root, generate, list, version (flags live here)
+internal/env         Environment struct, defaults, validation, stdlib Prompt (-> huh).
+                     OIDCDefaults + ApplyWiring carry per-IdP OIDC field values.
+internal/catalog     AuthPattern[] — THE IP. Knowledge base of topologies. Each pattern
+                     carries its Wiring (env.OIDCDefaults).
 internal/engine      Select(env) -> *AuthPattern. Pure, deterministic, unit-tested.
 internal/render      go:embed templates -> artifacts. add1 funcmap registered here.
 internal/render/templates/*.tmpl
 ```
+Flow: `generate` → env (flags/prompt) → `engine.Select` → `e.ApplyWiring(pattern.Wiring)`
+→ `render.Generate`. Adding an IdP = one catalog entry (incl. `Wiring`) + one recipe
+template; the shared templates stay generic and read `.Env.*`. A pattern with empty
+`CABundleConfigMap` (public-CA SaaS: Entra/Okta) makes the CR omit
+`issuerCertificateAuthority`; self-hosted IdPs (RHBK, PingFederate) set it.
 
 ## Hard rules
 - **The decision engine stays deterministic.** No LLM in `engine`/`catalog`. The value is the
@@ -34,26 +47,25 @@ internal/render/templates/*.tmpl
 - **`catalog` is the gold.** New capabilities = new `AuthPattern` entries, not new plumbing.
 - Keep facts version-accurate (4.20 GA; only one OIDC provider allowed; Keycloak doesn't
   auto-provision cert→user mapping; CAC identity is the EDIPI in the SAN).
+- cobra is **vendored** (`vendor/`) so the build stays offline / air-gap friendly.
 
 ## Commands
 ```bash
 go build ./...
 go test ./...
+go run . list
+go run . generate --idp <rhbk|keycloak|okta|entra|ping> --smartcard <cac|piv> --issuer <url> --out ./out
 go run . generate --interactive
 ```
+See `README.md` for the full flag reference and per-IdP examples.
 
 ## Next steps (the upgrade seams, in order)
-1. Swap flag dispatch for **cobra** under `cmd/`.
-2. Swap `env.Prompt` for **charmbracelet/huh** (the select-what-you-have wizard).
+1. ~~Swap flag dispatch for **cobra** under `cmd/`~~ (done).
+2. Swap `env.Prompt` for **charmbracelet/huh** (the "select what you have" wizard).
 3. Add **`--from-cluster`** via **client-go**: confirm 4.20+, detect RHBK, read the existing
    `Authentication` CR, pre-flight prereqs (trust bundle, CRL/OCSP reachability, break-glass).
-4. Add the next `AuthPattern`s: ~~Entra ID CBA~~ (done), ~~Okta PIV~~ (done),
-   ~~Ping / PingFederate X.509~~ (done). Each is a catalog entry + templates. Per-IdP OIDC field
-   values (provider name, claim names, client wiring) live on `AuthPattern.Wiring`
-   (`env.OIDCDefaults`); the CLI applies them via `Environment.ApplyWiring` after `engine.Select`,
-   so templates stay generic and read `.Env.*`. A pattern that leaves `CABundleConfigMap` empty
-   (e.g. Entra, behind a public CA) makes the CR omit `issuerCertificateAuthority`; self-hosted
-   IdPs (RHBK, PingFederate) set it. Remaining: Google. (ADFS dropped; PingOne SaaS deferred.)
+4. ~~IdP patterns: RHBK, Okta, Entra, PingFederate~~ (done via the `Wiring` seam). Google
+   excluded (see Scope). Possible future: PingOne (SaaS).
 5. Package: static binary + UBI image to `quay.io/cmalafis10/...`.
 
 ## Working style
