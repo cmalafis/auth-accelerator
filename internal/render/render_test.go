@@ -117,6 +117,45 @@ func TestGenerate_EntraCBA(t *testing.T) {
 	}
 }
 
+func TestGenerate_PingX509(t *testing.T) {
+	e := env.Defaults()
+	e.IDP = "ping"
+	e.SmartCard = "cac"
+	e.PKI = "dod"
+	e.IssuerURL = "https://pingfed.example.mil"
+
+	_, files := renderFor(t, e)
+
+	for _, want := range []string{
+		"authentication-cr.yaml",
+		"ping-x509-recipe.md",
+		"runbook.md",
+		"adr-0001-smart-card-auth.md",
+	} {
+		if _, ok := files[want]; !ok {
+			t.Errorf("expected output file %q, missing", want)
+		}
+	}
+
+	cr := files["authentication-cr.yaml"]
+	for _, want := range []string{
+		"name: pingfed-cac",
+		"oidcClients:",
+		"componentName: console",
+		"issuerCertificateAuthority", // self-hosted → CA bundle present
+		"claim: preferred_username",
+		"https://pingfed.example.mil",
+	} {
+		if !strings.Contains(cr, want) {
+			t.Errorf("authentication-cr.yaml missing %q:\n%s", want, cr)
+		}
+	}
+
+	if recipe := files["ping-x509-recipe.md"]; !strings.Contains(recipe, "X.509 Certificate Integration Kit") {
+		t.Errorf("ping-x509-recipe.md does not describe the X.509 Integration Kit:\n%s", recipe)
+	}
+}
+
 func TestGenerate_RHBKStillHasOIDCClients(t *testing.T) {
 	e := env.Defaults() // rhbk + cac + 4.20
 	_, files := renderFor(t, e)
