@@ -1,0 +1,42 @@
+# Microsoft Entra ID Certificate-Based Authentication (CBA) recipe — <DATE>
+
+Identity provider: **entra** · Smart card: **cac** · PKI: **dod**
+
+The smart-card authentication happens entirely at Microsoft Entra ID via
+**Certificate-Based Authentication (CBA)**. OpenShift then trusts the OIDC tokens
+Entra issues, via the generated `authentication-cr.yaml`.
+
+> Issuer URL format: `https://login.microsoftonline.com/<tenant-id>/v2.0`
+> (use `login.microsoftonline.us` for Azure Government / DoD). Wired in: `https://login.microsoftonline.com/TENANT/v2.0`
+
+## 1. App registrations
+- Confidential web app `openshift-console` — redirect
+  `https://<console>/auth/callback`. Create a **client secret**; it goes into the
+  `console-oidc-secret` secret in `openshift-config`.
+- Public / native client `openshift-cli` — redirect `http://localhost:8080`
+  (used by the `oc-oidc` exec plugin; no secret).
+- The `audiences` in the CR are the **Application (client) IDs** of these registrations.
+
+## 2. Certificate-Based Authentication
+Under **Security → Authentication methods → Certificate-based authentication**, upload the
+**dod** root + intermediate CAs to the tenant's certificate authorities and
+enable the method. Set the **authentication binding** (single vs. multi-factor) per policy.
+
+## 3. Username binding
+Map the certificate to the user object:
+- For **CAC**, the SAN **PrincipalName (EDIPI/UPN)** binds to `userPrincipalName` by default.
+- For higher affinity, use **IssuerAndSerialNumber** (set `certificateUserIds` on the user).
+- Ensure the username claim **`email`** is populated for cert users; if
+  `email` is empty, map the username to the UPN instead.
+- Group source for this deployment: **claims**.
+
+## 4. Claims (the Entra gotcha)
+- Add the **`groups`** claim in the app's **Token configuration**. Entra emits
+  group **object IDs (GUIDs)** by default — your OpenShift RBAC `RoleBinding`s must reference
+  those GUIDs, unless you restrict to on-prem-synced groups and emit group names.
+- Confirm the **`email`** claim is emitted in the ID/access token.
+
+## 5. No issuer CA bundle
+Entra's login endpoint uses a **publicly-trusted CA** already in the cluster trust store, so
+the generated CR omits `issuerCertificateAuthority`. If your cluster proxies egress through a
+TLS-inspecting middlebox, add that proxy's CA via a configmap and set it on the provider.

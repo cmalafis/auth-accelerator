@@ -36,6 +36,13 @@ oc get clusteroperator kube-apiserver
 oc login   # uses the oc-oidc exec plugin against {{ .Env.IssuerURL }}
 ```
 
+## Username mapping → RBAC
+This deployment maps the OpenShift username from the `{{ .Env.UsernameClaim }}` claim. Because
+no username prefix is configured (`prefixPolicy: NoOpinion`), OpenShift may prefix a username
+that does not come from the `sub` claim with the issuer URL — e.g. `{{ .Env.IssuerURL }}#<value>`.
+After the first login, run `oc whoami` to see the exact username string, and make your
+`RoleBinding` / `ClusterRoleBinding` subjects match it.
+
 ## Gotchas (read before you start)
 {{ range .Pattern.Gotchas }}- {{ . }}
 {{ end }}
