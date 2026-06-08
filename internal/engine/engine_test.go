@@ -64,3 +64,26 @@ func TestSelect_OktaRejectsNonSmartcard(t *testing.T) {
 		t.Fatal("expected no match for okta without a smart card, got a pattern")
 	}
 }
+
+func TestSelect_EntraCBAOn420(t *testing.T) {
+	e := env.Defaults()
+	e.IDP = "entra"
+	e.SmartCard = "cac"
+	p, err := Select(e)
+	if err != nil {
+		t.Fatalf("expected entra pattern to match, got error: %v", err)
+	}
+	if p.ID != "entra-cba-external-oidc" {
+		t.Fatalf("matched wrong pattern: %s", p.ID)
+	}
+}
+
+func TestSelect_EntraRejectsPre420(t *testing.T) {
+	e := env.Defaults()
+	e.IDP = "entra"
+	e.SmartCard = "cac"
+	e.OCPVersion = "4.19" // external OIDC not GA yet
+	if _, err := Select(e); err == nil {
+		t.Fatal("expected no match for entra on OCP 4.19, got a pattern")
+	}
+}

@@ -15,10 +15,12 @@ Generated {{ .Date }} by auth-accelerator · pattern `{{ .Pattern.ID }}` · inte
 {{ end }}
 ### Key commands
 ```
+{{ if .Env.CABundleConfigMap -}}
 # Create the issuer CA bundle configmap ({{ .Env.PKI }} PKI chain):
 oc create configmap {{ .Env.CABundleConfigMap }} \
   --from-file=ca-bundle.crt={{ .Env.PKI }}-pki-chain.crt -n openshift-config
 
+{{ end -}}
 # Create the console client secret (confidential client):
 oc create secret generic {{ .Env.ConsoleSecretName }} \
   --from-literal=clientSecret=<console-client-secret> -n openshift-config
