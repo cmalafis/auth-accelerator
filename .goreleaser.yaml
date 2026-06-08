@@ -1,0 +1,74 @@
+# goreleaser configuration — builds the static binaries (the primary way a
+# sysadmin runs the tool, no Go required) and an optional UBI container image.
+# Validated in CI by `goreleaser check`; runs for real on a `v*` tag.
+version: 2
+
+project_name: auth-accelerator
+
+builds:
+  - id: auth-accelerator
+    main: .
+    binary: auth-accelerator
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -mod=vendor
+    ldflags:
+      - -s -w -X github.com/cmalafis10/auth-accelerator/cmd.version={{ .Version }}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - id: default
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    files:
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: checksums.txt
+
+# Optional secondary artifact: a UBI-based image for shops that prefer
+# `podman run` or mirror into an internal/air-gapped registry.
+dockers:
+  - image_templates:
+      - "quay.io/cmalafis10/auth-accelerator:{{ .Version }}-amd64"
+    dockerfile: Containerfile
+    use: buildx
+    goos: linux
+    goarch: amd64
+    build_flag_templates:
+      - "--platform=linux/amd64"
+  - image_templates:
+      - "quay.io/cmalafis10/auth-accelerator:{{ .Version }}-arm64"
+    dockerfile: Containerfile
+    use: buildx
+    goos: linux
+    goarch: arm64
+    build_flag_templates:
+      - "--platform=linux/arm64"
+
+docker_manifests:
+  - name_template: "quay.io/cmalafis10/auth-accelerator:{{ .Version }}"
+    image_templates:
+      - "quay.io/cmalafis10/auth-accelerator:{{ .Version }}-amd64"
+      - "quay.io/cmalafis10/auth-accelerator:{{ .Version }}-arm64"
+  - name_template: "quay.io/cmalafis10/auth-accelerator:latest"
+    image_templates:
+      - "quay.io/cmalafis10/auth-accelerator:{{ .Version }}-amd64"
+      - "quay.io/cmalafis10/auth-accelerator:{{ .Version }}-arm64"
+
+release:
+  github:
+    owner: cmalafis
+    name: openshift-auth

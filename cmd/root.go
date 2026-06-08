@@ -16,7 +16,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const version = "0.1.0"
+// version is the default for local/dev builds; releases override it at build
+// time via -ldflags "-X github.com/cmalafis10/auth-accelerator/cmd.version=...".
+var version = "0.1.0"
 
 var rootCmd = &cobra.Command{
 	Use:   "auth-accelerator",
