@@ -6,6 +6,7 @@ package env
 import (
 	"bufio"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 )
@@ -94,16 +95,75 @@ func Defaults() Environment {
 	}
 }
 
-// Validate checks the required fields are present and sane.
+// Allowed values for the enum fields, in the order shown to users. These are
+// the syntactically valid inputs; the engine/catalog decides which combinations
+// actually resolve to a pattern.
+var (
+	allowedIDP       = []string{"rhbk", "keycloak", "okta", "entra", "ping"}
+	allowedSmartCard = []string{"cac", "piv", "eca"}
+	allowedPKI       = []string{"dod", "federal", "eca"}
+	allowedFlavor    = []string{"self-managed", "rosa", "aro", "okd"}
+	allowedGroups    = []string{"claims", "ldap"}
+)
+
+// AllowedIDPs returns the identity-provider keys the tool accepts (a copy, so
+// callers can't mutate the canonical list). Used for user-facing messages.
+func AllowedIDPs() []string { return append([]string(nil), allowedIDP...) }
+
+// oneOf returns a friendly error if val is not in allowed.
+func oneOf(flag, val string, allowed []string) error {
+	for _, a := range allowed {
+		if val == a {
+			return nil
+		}
+	}
+	return fmt.Errorf("unknown %s %q; choose one of: %s", flag, val, strings.Join(allowed, ", "))
+}
+
+// Validate checks the required fields are present and that every value is one
+// the tool understands, with messages aimed at a non-developer admin.
 func (e Environment) Validate() error {
 	if e.OCPVersion == "" {
-		return fmt.Errorf("OCPVersion is required (e.g. 4.20)")
+		return fmt.Errorf("OpenShift version is required (--ocp, e.g. 4.20)")
 	}
 	if e.IDP == "" {
-		return fmt.Errorf("IDP is required (e.g. rhbk)")
+		return fmt.Errorf("identity provider is required (--idp, e.g. rhbk)")
+	}
+	if err := oneOf("--idp", e.IDP, allowedIDP); err != nil {
+		return err
+	}
+	if err := oneOf("--smartcard", e.SmartCard, allowedSmartCard); err != nil {
+		return err
+	}
+	if err := oneOf("--pki", e.PKI, allowedPKI); err != nil {
+		return err
+	}
+	if err := oneOf("--flavor", e.OCPFlavor, allowedFlavor); err != nil {
+		return err
+	}
+	if err := oneOf("--groups", e.GroupSource, allowedGroups); err != nil {
+		return err
 	}
 	if e.IssuerURL == "" {
-		return fmt.Errorf("IssuerURL is required")
+		return fmt.Errorf("OIDC issuer URL is required (--issuer)")
+	}
+	if err := validateIssuerURL(e.IssuerURL); err != nil {
+		return err
+	}
+	return nil
+}
+
+// validateIssuerURL requires a well-formed https URL (OIDC issuers are https).
+func validateIssuerURL(s string) error {
+	u, err := url.Parse(s)
+	if err != nil {
+		return fmt.Errorf("invalid issuer URL %q: %v", s, err)
+	}
+	if u.Scheme != "https" {
+		return fmt.Errorf("issuer URL must start with https:// (got %q)", s)
+	}
+	if u.Host == "" {
+		return fmt.Errorf("issuer URL %q is missing a host (expected e.g. https://idp.example.mil)", s)
 	}
 	return nil
 }
