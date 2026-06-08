@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 
@@ -25,7 +24,11 @@ func newGenerateCmd() *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if interactive {
-				e = env.Prompt(os.Stdin)
+				prompted, err := env.Prompt()
+				if err != nil {
+					return fmt.Errorf("interactive mode needs a terminal (or use flags like --idp/--smartcard/--issuer instead): %w", err)
+				}
+				e = prompted
 			}
 			if err := e.Validate(); err != nil {
 				return err

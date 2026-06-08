@@ -4,11 +4,11 @@
 package env
 
 import (
-	"bufio"
 	"fmt"
 	"net/url"
-	"os"
 	"strings"
+
+	"github.com/charmbracelet/huh"
 )
 
 // Environment is everything the tool needs to pick a topology and render config.
@@ -168,25 +168,67 @@ func validateIssuerURL(s string) error {
 	return nil
 }
 
-// Prompt fills an Environment interactively from stdin. Minimal by design.
-func Prompt(in *os.File) Environment {
+// Prompt fills an Environment interactively with a guided huh form: select
+// menus for the enum fields and validated text inputs, so a non-developer
+// picks from lists instead of memorizing values. It returns an error if the
+// user aborts the form (e.g. Ctrl+C).
+func Prompt() (Environment, error) {
 	e := Defaults()
-	r := bufio.NewReader(in)
-	ask := func(label, cur string) string {
-		fmt.Printf("%s [%s]: ", label, cur)
-		line, _ := r.ReadString('\n')
-		line = strings.TrimSpace(line)
-		if line == "" {
-			return cur
-		}
-		return line
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("OpenShift version").
+				Description("Smart-card external OIDC requires 4.20+").
+				Value(&e.OCPVersion).
+				Validate(nonEmpty("OpenShift version")),
+			huh.NewSelect[string]().
+				Title("OpenShift flavor").
+				Options(options(allowedFlavor)...).
+				Value(&e.OCPFlavor),
+			huh.NewSelect[string]().
+				Title("Identity provider").
+				Options(options(allowedIDP)...).
+				Value(&e.IDP),
+			huh.NewSelect[string]().
+				Title("Smart card").
+				Options(options(allowedSmartCard)...).
+				Value(&e.SmartCard),
+			huh.NewSelect[string]().
+				Title("PKI chain").
+				Options(options(allowedPKI)...).
+				Value(&e.PKI),
+			huh.NewSelect[string]().
+				Title("Group source").
+				Options(options(allowedGroups)...).
+				Value(&e.GroupSource),
+			huh.NewInput().
+				Title("OIDC issuer URL").
+				Description("Your IdP's issuer, e.g. https://idp.example.mil").
+				Value(&e.IssuerURL).
+				Validate(validateIssuerURL),
+		),
+	)
+	if err := form.Run(); err != nil {
+		return e, err
 	}
-	e.OCPVersion = ask("OpenShift version", e.OCPVersion)
-	e.OCPFlavor = ask("OCP flavor (self-managed|rosa|aro|okd)", e.OCPFlavor)
-	e.IDP = ask("Identity provider (rhbk|keycloak|okta|entra|ping)", e.IDP)
-	e.SmartCard = ask("Smart card (cac|piv|eca)", e.SmartCard)
-	e.PKI = ask("PKI (dod|federal|eca)", e.PKI)
-	e.GroupSource = ask("Group source (claims|ldap)", e.GroupSource)
-	e.IssuerURL = ask("OIDC issuer URL", e.IssuerURL)
-	return e
+	return e, nil
+}
+
+// options turns a list of allowed values into huh select options.
+func options(vals []string) []huh.Option[string] {
+	o := make([]huh.Option[string], len(vals))
+	for i, v := range vals {
+		o[i] = huh.NewOption(v, v)
+	}
+	return o
+}
+
+// nonEmpty is a huh input validator that rejects blank values.
+func nonEmpty(field string) func(string) error {
+	return func(s string) error {
+		if strings.TrimSpace(s) == "" {
+			return fmt.Errorf("%s is required", field)
+		}
+		return nil
+	}
 }
