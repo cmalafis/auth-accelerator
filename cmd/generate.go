@@ -60,7 +60,7 @@ func newGenerateCmd() *cobra.Command {
 	f.StringVar(&out, "out", "./out", "output directory")
 	f.StringVar(&e.OCPVersion, "ocp", e.OCPVersion, "OpenShift version (e.g. 4.20)")
 	f.StringVar(&e.OCPFlavor, "flavor", e.OCPFlavor, "self-managed|rosa|aro|okd")
-	f.StringVar(&e.IDP, "idp", e.IDP, "rhbk|keycloak|entra|okta|ping|adfs")
+	f.StringVar(&e.IDP, "idp", e.IDP, "rhbk|keycloak|okta|entra|ping")
 	f.StringVar(&e.SmartCard, "smartcard", e.SmartCard, "cac|piv|eca")
 	f.StringVar(&e.PKI, "pki", e.PKI, "dod|federal|eca")
 	f.StringVar(&e.GroupSource, "groups", e.GroupSource, "claims|ldap")

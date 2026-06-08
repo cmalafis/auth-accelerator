@@ -14,7 +14,7 @@ import (
 type Environment struct {
 	OCPVersion  string // e.g. "4.20"
 	OCPFlavor   string // self-managed | rosa | aro | okd
-	IDP         string // rhbk | keycloak | entra | okta | ping | adfs | none
+	IDP         string // rhbk | keycloak | okta | entra | ping
 	SmartCard   string // cac | piv | eca
 	PKI         string // dod | federal | eca
 	FIPS        bool
@@ -123,7 +123,7 @@ func Prompt(in *os.File) Environment {
 	}
 	e.OCPVersion = ask("OpenShift version", e.OCPVersion)
 	e.OCPFlavor = ask("OCP flavor (self-managed|rosa|aro|okd)", e.OCPFlavor)
-	e.IDP = ask("Identity provider (rhbk|keycloak|entra|okta|ping|adfs)", e.IDP)
+	e.IDP = ask("Identity provider (rhbk|keycloak|okta|entra|ping)", e.IDP)
 	e.SmartCard = ask("Smart card (cac|piv|eca)", e.SmartCard)
 	e.PKI = ask("PKI (dod|federal|eca)", e.PKI)
 	e.GroupSource = ask("Group source (claims|ldap)", e.GroupSource)
