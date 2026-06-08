@@ -75,6 +75,48 @@ func TestGenerate_OktaCBA(t *testing.T) {
 	}
 }
 
+func TestGenerate_EntraCBA(t *testing.T) {
+	e := env.Defaults()
+	e.IDP = "entra"
+	e.SmartCard = "cac"
+	e.PKI = "dod"
+	e.IssuerURL = "https://login.microsoftonline.com/tenant-id/v2.0"
+
+	_, files := renderFor(t, e)
+
+	for _, want := range []string{
+		"authentication-cr.yaml",
+		"entra-cba-recipe.md",
+		"runbook.md",
+		"adr-0001-smart-card-auth.md",
+	} {
+		if _, ok := files[want]; !ok {
+			t.Errorf("expected output file %q, missing", want)
+		}
+	}
+
+	cr := files["authentication-cr.yaml"]
+	for _, want := range []string{
+		"name: entra-cba",
+		"oidcClients:",
+		"componentName: console",
+		"https://login.microsoftonline.com/tenant-id/v2.0",
+	} {
+		if !strings.Contains(cr, want) {
+			t.Errorf("authentication-cr.yaml missing %q:\n%s", want, cr)
+		}
+	}
+	// Entra is behind a public CA: the CR must NOT reference a custom CA bundle.
+	if strings.Contains(cr, "issuerCertificateAuthority") {
+		t.Errorf("entra CR should omit issuerCertificateAuthority:\n%s", cr)
+	}
+
+	// The runbook must not tell the admin to create a CA bundle configmap.
+	if rb := files["runbook.md"]; strings.Contains(rb, "issuer CA bundle configmap") {
+		t.Errorf("entra runbook should omit the CA bundle configmap step:\n%s", rb)
+	}
+}
+
 func TestGenerate_RHBKStillHasOIDCClients(t *testing.T) {
 	e := env.Defaults() // rhbk + cac + 4.20
 	_, files := renderFor(t, e)
@@ -88,5 +130,9 @@ func TestGenerate_RHBKStillHasOIDCClients(t *testing.T) {
 	}
 	if !strings.Contains(cr, "claim: preferred_username") {
 		t.Errorf("rhbk username claim changed unexpectedly:\n%s", cr)
+	}
+	// Self-hosted RHBK still needs the issuer CA bundle (guards the conditional).
+	if !strings.Contains(cr, "issuerCertificateAuthority") {
+		t.Errorf("rhbk CR should keep issuerCertificateAuthority:\n%s", cr)
 	}
 }

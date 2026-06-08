@@ -5,10 +5,12 @@
 # Save a break-glass kubeconfig first:
 #   {{ .Pattern.BreakGlass }}
 #
+{{- if .Env.CABundleConfigMap }}
 # The issuer CA bundle must exist as a configmap in openshift-config first:
 #   oc create configmap {{ .Env.CABundleConfigMap }} \
 #     --from-file=ca-bundle.crt={{ .Env.PKI }}-pki-chain.crt -n openshift-config
 #
+{{- end }}
 # The console is a confidential client; its secret must exist before this reconciles:
 #   oc create secret generic {{ .Env.ConsoleSecretName }} \
 #     --from-literal=clientSecret=<console-client-secret> -n openshift-config
@@ -27,8 +29,10 @@ spec:
         audiences:
           - {{ .Env.ConsoleClientID }}
           - {{ .Env.CLIClientID }}
+{{- if .Env.CABundleConfigMap }}
         issuerCertificateAuthority:
           name: {{ .Env.CABundleConfigMap }}
+{{- end }}
       oidcClients:
         # The web console is an in-cluster component that consumes the OIDC
         # provider as a confidential client. The CLI (oc) authenticates as a

@@ -86,9 +86,11 @@ func Defaults() Environment {
 		ConsoleClientID:   "openshift-console",
 		CLIClientID:       "openshift-cli",
 		ConsoleSecretName: "console-oidc-secret",
-		CABundleConfigMap: "oidc-ca-bundle",
-		UsernameClaim:     "preferred_username",
-		GroupsClaim:       "groups",
+		// CABundleConfigMap is intentionally unset here: it is supplied per-IdP
+		// via AuthPattern.Wiring. Self-hosted IdPs (RHBK) set it; IdPs behind a
+		// public CA (Entra) leave it empty so the CR omits issuerCertificateAuthority.
+		UsernameClaim: "preferred_username",
+		GroupsClaim:   "groups",
 	}
 }
 

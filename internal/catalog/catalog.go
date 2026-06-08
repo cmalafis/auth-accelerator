@@ -150,6 +150,63 @@ var Patterns = []AuthPattern{
 			{Template: "adr.md.tmpl", Out: "adr-0001-smart-card-auth.md"},
 		},
 	},
+	{
+		ID:             "entra-cba-external-oidc",
+		Title:          "Microsoft Entra ID CBA PIV/CAC smart card → OpenShift 4.20+ external OIDC",
+		IDP:            "entra",
+		OCPIntegration: "external-oidc",
+		MinOCPVersion:  "4.20",
+		Applies: func(e env.Environment) bool {
+			cardOK := e.SmartCard == "cac" || e.SmartCard == "piv"
+			return e.IDP == "entra" && cardOK && versionAtLeast(e.OCPVersion, "4.20")
+		},
+		Wiring: env.OIDCDefaults{
+			ProviderName:      "entra-cba",
+			ConsoleClientID:   "openshift-console",
+			CLIClientID:       "openshift-cli",
+			ConsoleSecretName: "console-oidc-secret",
+			UsernameClaim:     "email",
+			GroupsClaim:       "groups",
+			// CABundleConfigMap left empty: Entra's OIDC endpoint
+			// (login.microsoftonline.com / .us) uses a publicly-trusted CA, so the
+			// CR omits issuerCertificateAuthority and relies on the system trust.
+		},
+		Prereqs: []string{
+			"OpenShift 4.20+ (external/direct OIDC is GA in 4.20).",
+			"A Microsoft Entra ID tenant (commercial or Azure Government for DoD/federal).",
+			"Entra Certificate-Based Authentication (CBA) configured with the DoD/federal CA chain uploaded to the tenant's certificate authorities.",
+			"App registrations created for the console (confidential web app) and CLI (public/native client).",
+			"Cluster and clients have network egress to login.microsoftonline.com (or login.microsoftonline.us) — Entra is SaaS, not reachable from a fully air-gapped cluster.",
+		},
+		Steps: []string{
+			"Save a break-glass kubeconfig and store it OFF-cluster before changing anything.",
+			"In Entra: create the app registrations — confidential web app 'openshift-console' (redirect https://<console>/auth/callback, with a client secret) and public/native client 'openshift-cli' (redirect http://localhost:8080).",
+			"In Entra: under Authentication methods, enable Certificate-Based Authentication and upload the DoD/federal root + intermediate CAs to the tenant.",
+			"In Entra: set the CBA authentication binding (single/multi-factor) and the username binding — by default SAN PrincipalName maps to userPrincipalName; for high affinity use IssuerAndSerialNumber.",
+			"In Entra: configure the app's token configuration to emit the 'groups' claim, and confirm the username claim (email/UPN) is populated for cert users.",
+			"Create the console client secret in openshift-config (see runbook command) — the CR references it.",
+			"Apply the generated Authentication CR (no issuer CA configmap needed — Entra uses a public CA).",
+			"Watch the rollout until authentication.config/cluster reports type: OIDC and kube-apiserver finishes its revision.",
+			"Validate: oc login via the oc-oidc plugin with a PIV/CAC card inserted; confirm group claims map to the expected RBAC.",
+		},
+		Gotchas: []string{
+			"Enabling external OIDC removes the OpenShift OAuth server — without a saved break-glass kubeconfig you can lock yourself out of the cluster.",
+			"Only one OIDC provider is allowed cluster-wide.",
+			"Entra emits group OBJECT IDs (GUIDs), not names, by default — RBAC RoleBindings must reference the group GUIDs unless you configure group-name claims (which require on-prem-synced groups).",
+			"The username binding must agree with the username claim: CBA binds the cert SAN PrincipalName to userPrincipalName; if 'email' is not populated for cert users, map the username claim to UPN instead.",
+			"DoD CAC/PIV SANs carry the EDIPI/UPN — ensure the certificateUserIds / username binding targets the correct field, not the Subject CN.",
+			"The console client secret must exist in openshift-config before the CR reconciles, or the web console stays down.",
+			"Entra is SaaS: a fully disconnected/air-gapped cluster cannot reach it — this pattern needs egress to the Entra login endpoint.",
+			"FIPS mode: some smart cards negotiate only TLS 1.2 — align cluster cipher config accordingly.",
+		},
+		BreakGlass: "oc config view --flatten > break-glass.kubeconfig   # store securely OFF-cluster before applying",
+		Manifests: []ManifestSpec{
+			{Template: "authentication-cr.yaml.tmpl", Out: "authentication-cr.yaml"},
+			{Template: "entra-cba-recipe.md.tmpl", Out: "entra-cba-recipe.md"},
+			{Template: "runbook.md.tmpl", Out: "runbook.md"},
+			{Template: "adr.md.tmpl", Out: "adr-0001-smart-card-auth.md"},
+		},
+	},
 }
 
 // --- version helper (kept here because Applies depends on it; no import cycle) ---
