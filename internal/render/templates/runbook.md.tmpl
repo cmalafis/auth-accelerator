@@ -15,9 +15,13 @@ Generated {{ .Date }} by auth-accelerator · pattern `{{ .Pattern.ID }}` · inte
 {{ end }}
 ### Key commands
 ```
-# Create the issuer CA bundle configmap (DoD PKI chain):
+# Create the issuer CA bundle configmap ({{ .Env.PKI }} PKI chain):
 oc create configmap {{ .Env.CABundleConfigMap }} \
-  --from-file=ca-bundle.crt=dod-pki-chain.crt -n openshift-config
+  --from-file=ca-bundle.crt={{ .Env.PKI }}-pki-chain.crt -n openshift-config
+
+# Create the console client secret (confidential client):
+oc create secret generic {{ .Env.ConsoleSecretName }} \
+  --from-literal=clientSecret=<console-client-secret> -n openshift-config
 
 # Apply the generated Authentication CR:
 oc apply -f authentication-cr.yaml
@@ -26,7 +30,7 @@ oc apply -f authentication-cr.yaml
 oc get authentication.config/cluster -o jsonpath='{.spec.type}{"\n"}'   # -> OIDC
 oc get clusteroperator kube-apiserver
 
-# Validate with a CAC inserted:
+# Validate with a {{ .Env.SmartCard }} smart card inserted:
 oc login   # uses the oc-oidc exec plugin against {{ .Env.IssuerURL }}
 ```
 

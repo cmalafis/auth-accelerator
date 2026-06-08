@@ -1,0 +1,42 @@
+# Okta Certificate-Based Authentication (CBA) recipe — {{ .Date }}
+
+Identity provider: **{{ .Env.IDP }}** · Smart card: **{{ .Env.SmartCard }}** · PKI: **{{ .Env.PKI }}**
+
+The smart-card authentication happens entirely at Okta via **Certificate-Based
+Authentication (CBA)**. OpenShift then trusts the OIDC tokens Okta issues, via the
+generated `authentication-cr.yaml`. CBA is an **Okta Identity Engine** feature — an
+Okta Classic org cannot present the PIV authenticator.
+
+## 1. OIDC applications
+- Confidential web app `{{ .Env.ConsoleClientID }}` — sign-in redirect
+  `https://<console>/auth/callback`. Note its **client secret**; it goes into the
+  `{{ .Env.ConsoleSecretName }}` secret in `openshift-config`.
+- Native / public client `{{ .Env.CLIClientID }}` — redirect `http://localhost:8080`
+  (used by the `oc-oidc` exec plugin; no secret).
+
+## 2. Smart Card (PIV) authenticator
+Under **Security → Authenticators**, add the **Smart Card / PIV** authenticator and
+upload the **{{ .Env.PKI }}** trust chain (root + intermediates) so Okta can validate
+presented client certificates.
+
+## 3. Authentication policy
+Add an authentication policy (or global session / routing rule) that **requires the
+Smart Card authenticator** for the OpenShift apps above, so users must present a
+{{ .Env.SmartCard }} card rather than a password.
+
+## 4. Certificate → user mapping
+Okta matches the presented certificate to an existing user. Map the certificate
+identity to the attribute backing `{{ .Env.UsernameClaim }}`:
+{{- if eq .Env.SmartCard "cac" }}
+- For **CAC**, read the **EDIPI/UPN from the certificate SAN**, not the Subject CN.
+{{- else }}
+- Map the appropriate SAN field (EDIPI/UPN) to the user attribute, not the Subject CN.
+{{- end }}
+- Group source for this deployment: **{{ .Env.GroupSource }}**.
+
+## 5. Claims
+- Add a **`{{ .Env.GroupsClaim }}`** claim to the ID/access token with a group filter —
+  Okta emits no groups claim by default, and OpenShift RBAC will see no groups without it.
+- Ensure the **`{{ .Env.UsernameClaim }}`** claim is emitted for the username mapping.
+
+> Issuer URL wired into OpenShift: `{{ .Env.IssuerURL }}`

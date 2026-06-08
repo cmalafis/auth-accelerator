@@ -26,9 +26,50 @@ type Environment struct {
 	IssuerURL         string
 	ConsoleClientID   string
 	CLIClientID       string
+	ConsoleSecretName string // console client secret in openshift-config
 	CABundleConfigMap string
 	UsernameClaim     string
 	GroupsClaim       string
+}
+
+// OIDCDefaults is the per-IdP OIDC wiring an AuthPattern carries. The CLI applies
+// the matched pattern's defaults to the Environment so each IdP renders its own
+// provider name, claim names, and client wiring (see Environment.ApplyWiring).
+// IssuerURL is deliberately absent: it is deployment-specific and comes from --issuer.
+type OIDCDefaults struct {
+	ProviderName      string
+	ConsoleClientID   string
+	CLIClientID       string
+	ConsoleSecretName string
+	UsernameClaim     string
+	GroupsClaim       string
+	CABundleConfigMap string
+}
+
+// ApplyWiring copies the non-empty fields of d onto the Environment. Non-empty
+// wins, so a pattern may leave a field blank to keep the existing default.
+func (e *Environment) ApplyWiring(d OIDCDefaults) {
+	if d.ProviderName != "" {
+		e.ProviderName = d.ProviderName
+	}
+	if d.ConsoleClientID != "" {
+		e.ConsoleClientID = d.ConsoleClientID
+	}
+	if d.CLIClientID != "" {
+		e.CLIClientID = d.CLIClientID
+	}
+	if d.ConsoleSecretName != "" {
+		e.ConsoleSecretName = d.ConsoleSecretName
+	}
+	if d.UsernameClaim != "" {
+		e.UsernameClaim = d.UsernameClaim
+	}
+	if d.GroupsClaim != "" {
+		e.GroupsClaim = d.GroupsClaim
+	}
+	if d.CABundleConfigMap != "" {
+		e.CABundleConfigMap = d.CABundleConfigMap
+	}
 }
 
 // Defaults returns an Environment seeded with sensible federal defaults.
@@ -44,6 +85,7 @@ func Defaults() Environment {
 		IssuerURL:         "https://sso.example.mil/realms/fed",
 		ConsoleClientID:   "openshift-console",
 		CLIClientID:       "openshift-cli",
+		ConsoleSecretName: "console-oidc-secret",
 		CABundleConfigMap: "oidc-ca-bundle",
 		UsernameClaim:     "preferred_username",
 		GroupsClaim:       "groups",

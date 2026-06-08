@@ -36,6 +36,10 @@ func newGenerateCmd() *cobra.Command {
 				return err
 			}
 
+			// Apply the matched pattern's IdP-appropriate OIDC wiring (provider
+			// name, claim names, client wiring) before rendering.
+			e.ApplyWiring(pattern.Wiring)
+
 			written, err := render.Generate(pattern, e, out)
 			if err != nil {
 				return err

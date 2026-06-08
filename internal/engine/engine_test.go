@@ -32,3 +32,35 @@ func TestSelect_KeycloakAlias(t *testing.T) {
 		t.Fatalf("keycloak should match the rhbk pattern: %v", err)
 	}
 }
+
+func TestSelect_OktaCBAOn420(t *testing.T) {
+	e := env.Defaults()
+	e.IDP = "okta"
+	e.SmartCard = "piv"
+	p, err := Select(e)
+	if err != nil {
+		t.Fatalf("expected okta pattern to match, got error: %v", err)
+	}
+	if p.ID != "okta-cba-external-oidc" {
+		t.Fatalf("matched wrong pattern: %s", p.ID)
+	}
+}
+
+func TestSelect_OktaRejectsPre420(t *testing.T) {
+	e := env.Defaults()
+	e.IDP = "okta"
+	e.SmartCard = "piv"
+	e.OCPVersion = "4.19" // external OIDC not GA yet
+	if _, err := Select(e); err == nil {
+		t.Fatal("expected no match for okta on OCP 4.19, got a pattern")
+	}
+}
+
+func TestSelect_OktaRejectsNonSmartcard(t *testing.T) {
+	e := env.Defaults()
+	e.IDP = "okta"
+	e.SmartCard = "none" // CBA pattern requires cac|piv
+	if _, err := Select(e); err == nil {
+		t.Fatal("expected no match for okta without a smart card, got a pattern")
+	}
+}

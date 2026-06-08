@@ -7,7 +7,11 @@
 #
 # The issuer CA bundle must exist as a configmap in openshift-config first:
 #   oc create configmap {{ .Env.CABundleConfigMap }} \
-#     --from-file=ca-bundle.crt=dod-pki-chain.crt -n openshift-config
+#     --from-file=ca-bundle.crt={{ .Env.PKI }}-pki-chain.crt -n openshift-config
+#
+# The console is a confidential client; its secret must exist before this reconciles:
+#   oc create secret generic {{ .Env.ConsoleSecretName }} \
+#     --from-literal=clientSecret=<console-client-secret> -n openshift-config
 ---
 apiVersion: config.openshift.io/v1
 kind: Authentication
@@ -25,6 +29,15 @@ spec:
           - {{ .Env.CLIClientID }}
         issuerCertificateAuthority:
           name: {{ .Env.CABundleConfigMap }}
+      oidcClients:
+        # The web console is an in-cluster component that consumes the OIDC
+        # provider as a confidential client. The CLI (oc) authenticates as a
+        # public client via the oc-oidc exec plugin and is not listed here.
+        - componentName: console
+          componentNamespace: openshift-console
+          clientID: {{ .Env.ConsoleClientID }}
+          clientSecret:
+            name: {{ .Env.ConsoleSecretName }}
       claimMappings:
         username:
           claim: {{ .Env.UsernameClaim }}
