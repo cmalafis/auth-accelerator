@@ -28,16 +28,35 @@ just consumes the IdP's OIDC tokens.
 smart-card story is SAML + middleware), and ADFS is out of scope. PingOne (Ping's SaaS) is
 deferred in favor of self-hosted PingFederate.
 
-## Install & build
+## Install
 
+You do **not** need Go or any developer tools to run the generator — pick one:
+
+**Download the binary (recommended).** Grab the archive for your OS/arch from the
+[Releases page](https://github.com/cmalafis/openshift-auth/releases), extract it, and run it:
 ```bash
-go build ./...      # build (cobra is vendored, so this works offline / air-gapped)
-go test ./...       # run the unit tests
-go install .        # optional: put `auth-accelerator` on your PATH
+tar xzf auth-accelerator_*_linux_amd64.tar.gz
+./auth-accelerator --help
 ```
 
-Requires Go 1.22+. Dependencies are vendored under `vendor/`, so no network is needed to
-build.
+**Container image (optional)** — for shops that prefer `podman`/`docker` or mirror into an
+internal/air-gapped registry:
+```bash
+podman run --rm -v "$PWD/out:/work/out:Z" \
+  quay.io/cmalafis10/auth-accelerator:latest \
+  generate --idp okta --smartcard piv --issuer https://example.okta.com --out /work/out
+```
+
+> Running the generator only *produces* the YAML + runbook. Applying them to a cluster is
+> just the `oc` commands in the generated `runbook.md` — no tool required for that part.
+
+### Build from source (developers)
+```bash
+make build      # or: go build ./...   (deps are vendored — works offline)
+make test
+make install    # puts auth-accelerator on your PATH
+```
+Requires Go 1.23+. Releases are cut by tagging `vX.Y.Z` (goreleaser via GitHub Actions).
 
 ## Usage
 
