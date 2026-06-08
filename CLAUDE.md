@@ -47,12 +47,13 @@ go run . generate --interactive
 2. Swap `env.Prompt` for **charmbracelet/huh** (the select-what-you-have wizard).
 3. Add **`--from-cluster`** via **client-go**: confirm 4.20+, detect RHBK, read the existing
    `Authentication` CR, pre-flight prereqs (trust bundle, CRL/OCSP reachability, break-glass).
-4. Add the next `AuthPattern`s: ~~Entra ID CBA~~ (done), ~~Okta PIV~~ (done). Each is a catalog
-   entry + templates. Per-IdP OIDC field values (provider name, claim names, client wiring) live
-   on `AuthPattern.Wiring` (`env.OIDCDefaults`); the CLI applies them via `Environment.ApplyWiring`
-   after `engine.Select`, so templates stay generic and read `.Env.*`. A pattern that leaves
-   `CABundleConfigMap` empty (e.g. Entra, behind a public CA) makes the CR omit
-   `issuerCertificateAuthority`. Remaining: Ping, Google, ADFS.
+4. Add the next `AuthPattern`s: ~~Entra ID CBA~~ (done), ~~Okta PIV~~ (done),
+   ~~Ping / PingFederate X.509~~ (done). Each is a catalog entry + templates. Per-IdP OIDC field
+   values (provider name, claim names, client wiring) live on `AuthPattern.Wiring`
+   (`env.OIDCDefaults`); the CLI applies them via `Environment.ApplyWiring` after `engine.Select`,
+   so templates stay generic and read `.Env.*`. A pattern that leaves `CABundleConfigMap` empty
+   (e.g. Entra, behind a public CA) makes the CR omit `issuerCertificateAuthority`; self-hosted
+   IdPs (RHBK, PingFederate) set it. Remaining: Google. (ADFS dropped; PingOne SaaS deferred.)
 5. Package: static binary + UBI image to `quay.io/cmalafis10/...`.
 
 ## Working style

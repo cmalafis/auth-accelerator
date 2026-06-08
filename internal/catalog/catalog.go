@@ -207,6 +207,65 @@ var Patterns = []AuthPattern{
 			{Template: "adr.md.tmpl", Out: "adr-0001-smart-card-auth.md"},
 		},
 	},
+	{
+		ID:             "ping-cac-external-oidc",
+		Title:          "PingFederate X.509 PIV/CAC smart card → OpenShift 4.20+ external OIDC",
+		IDP:            "ping",
+		OCPIntegration: "external-oidc",
+		MinOCPVersion:  "4.20",
+		Applies: func(e env.Environment) bool {
+			cardOK := e.SmartCard == "cac" || e.SmartCard == "piv"
+			return e.IDP == "ping" && cardOK && versionAtLeast(e.OCPVersion, "4.20")
+		},
+		Wiring: env.OIDCDefaults{
+			ProviderName:      "pingfed-cac",
+			ConsoleClientID:   "openshift-console",
+			CLIClientID:       "openshift-cli",
+			ConsoleSecretName: "console-oidc-secret",
+			UsernameClaim:     "preferred_username",
+			GroupsClaim:       "groups",
+			// Self-hosted PingFederate sits behind a customer/DoD-managed CA, so the
+			// CR includes issuerCertificateAuthority (twin of the RHBK pattern).
+			CABundleConfigMap: "oidc-ca-bundle",
+		},
+		Prereqs: []string{
+			"OpenShift 4.20+ (external/direct OIDC is GA in 4.20).",
+			"PingFederate reachable from the cluster and from clients.",
+			"PingFederate X.509 Certificate Integration Kit installed — it is an add-on, not a built-in adapter.",
+			"DoD/federal PKI trust chain (root + intermediates) available as a CA bundle file.",
+			"PingFederate fronted by passthrough ingress so client-cert mTLS terminates at PingFederate, not the router.",
+		},
+		Steps: []string{
+			"Save a break-glass kubeconfig and store it OFF-cluster before changing anything.",
+			"On PingFederate: install the X.509 Certificate Integration Kit and configure the X.509 IdP Adapter — set acceptable issuers to the DoD/federal PKI and extract the EDIPI/UPN from the certificate SAN.",
+			"On PingFederate: require client certificates (enable mutual TLS) via the passthrough ingress so the card is challenged at sign-in.",
+			"On PingFederate: map the extracted SAN identity to the attribute backing preferred_username.",
+			"On PingFederate: create OIDC clients — confidential 'openshift-console' (redirect https://<console>/auth/callback) and public 'openshift-cli' (redirect http://localhost:8080).",
+			"On PingFederate: extend the access-token contract / OIDC policy so the username and 'groups' claims are emitted to OpenShift.",
+			"Create the console client secret in openshift-config (see runbook command) — the CR references it.",
+			"Create the issuer CA bundle configmap in openshift-config (see runbook command).",
+			"Apply the generated Authentication CR.",
+			"Watch the rollout until authentication.config/cluster reports type: OIDC and kube-apiserver finishes its revision.",
+			"Validate: oc login via the oc-oidc plugin with a CAC/PIV card inserted; confirm group claims map to the expected RBAC.",
+		},
+		Gotchas: []string{
+			"Enabling external OIDC removes the OpenShift OAuth server — without a saved break-glass kubeconfig you can lock yourself out of the cluster.",
+			"Only one OIDC provider is allowed cluster-wide.",
+			"The X.509 Certificate Integration Kit is an add-on you must install — a stock PingFederate has no certificate adapter.",
+			"DoD CAC/PIV SANs carry the EDIPI/UPN — map the correct SAN field, not the Subject CN.",
+			"PingFederate emits no groups by default — extend the access-token contract / OIDC policy to include the 'groups' claim or RBAC sees none.",
+			"Certificate validation needs CRL/OCSP reachability — air-gapped: stand up a local CRL distribution point.",
+			"The console client secret must exist in openshift-config before the CR reconciles, or the web console stays down.",
+			"FIPS mode: some smart cards negotiate only TLS 1.2 — align PingFederate and cluster cipher config.",
+		},
+		BreakGlass: "oc config view --flatten > break-glass.kubeconfig   # store securely OFF-cluster before applying",
+		Manifests: []ManifestSpec{
+			{Template: "authentication-cr.yaml.tmpl", Out: "authentication-cr.yaml"},
+			{Template: "ping-x509-recipe.md.tmpl", Out: "ping-x509-recipe.md"},
+			{Template: "runbook.md.tmpl", Out: "runbook.md"},
+			{Template: "adr.md.tmpl", Out: "adr-0001-smart-card-auth.md"},
+		},
+	},
 }
 
 // --- version helper (kept here because Applies depends on it; no import cycle) ---

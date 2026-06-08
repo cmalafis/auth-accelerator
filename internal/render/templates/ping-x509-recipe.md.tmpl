@@ -1,0 +1,41 @@
+# PingFederate smart-card (X.509) recipe — {{ .Date }}
+
+Identity provider: **{{ .Env.IDP }}** (PingFederate) · Smart card: **{{ .Env.SmartCard }}** · PKI: **{{ .Env.PKI }}**
+
+The smart-card authentication happens entirely at PingFederate via the **X.509
+Certificate Integration Kit**. OpenShift then trusts the OIDC tokens PingFederate
+issues, via the generated `authentication-cr.yaml`.
+
+## 1. Mutual TLS / ingress
+PingFederate must terminate client-certificate mTLS itself, so expose it through
+**passthrough ingress** (not edge/reencrypt at the router).
+
+## 2. Install the X.509 Certificate Integration Kit
+The certificate adapter is an **add-on**, not built in. Install the **X.509 Certificate
+Integration Kit** and deploy the **X.509 Certificate IdP Adapter** instance.
+
+## 3. Configure the X.509 IdP Adapter
+- Set the **acceptable issuers** to the **{{ .Env.PKI }}** chain (root + intermediates) so the
+  adapter validates presented client certificates.
+- Enable certificate-validity checking (CRL/OCSP).
+- Extract the certificate identity for mapping:
+{{- if eq .Env.SmartCard "cac" }}
+  - For **CAC**, read the **EDIPI/UPN from the certificate SAN**, not the Subject CN.
+{{- else }}
+  - Map the appropriate SAN field (EDIPI/UPN) to the user attribute, not the Subject CN.
+{{- end }}
+
+## 4. Certificate → user mapping
+Map the extracted SAN identity to the attribute that backs `{{ .Env.UsernameClaim }}`.
+- Group source for this deployment: **{{ .Env.GroupSource }}**.
+
+## 5. OIDC clients
+- Confidential client `{{ .Env.ConsoleClientID }}` — redirect `https://<console>/auth/callback`.
+- Public client `{{ .Env.CLIClientID }}` — redirect `http://localhost:8080`.
+
+## 6. Token contract / OIDC policy
+Extend the **access-token contract** (and OIDC policy) so PingFederate emits both the
+`{{ .Env.UsernameClaim }}` and `{{ .Env.GroupsClaim }}` claims to OpenShift — PingFederate
+sends no groups by default.
+
+> Issuer URL wired into OpenShift: `{{ .Env.IssuerURL }}`
