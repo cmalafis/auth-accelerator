@@ -3,3 +3,8 @@ out/
 auth-accelerator
 /dist/
 .claude/settings.local.json
+
+# Credential material — nothing here today; guards against a future `git add -A`
+.env
+*.pem
+*.key
