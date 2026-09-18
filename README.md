@@ -1,10 +1,14 @@
 # auth-accelerator
 
-An internal Red Hat accelerator that generates the YAML and a step-by-step runbook to
+A command-line tool that generates the YAML and a step-by-step runbook to
 enable **smart-card (CAC/PIV) authentication on OpenShift 4.20+**, based on the identity
 components an admin already has. The admin declares what they have; the tool selects the
 right topology and emits the `Authentication` CR, an IdP-specific recipe, a runbook, and an
 ADR.
+
+> **Disclaimer:** this is a personal project. It is not affiliated with, sponsored by, or
+> endorsed by Red Hat, Inc. "Red Hat", "OpenShift", and "RHBK" are trademarks of Red Hat,
+> Inc., used here only to refer to the products this tool targets.
 
 Scope is deliberately **OCP 4.20+ only**, where external/direct OIDC is GA — so there's a
 single clean integration path (the `Authentication` CR with `oidcProviders`), no legacy
@@ -33,7 +37,7 @@ deferred in favor of self-hosted PingFederate.
 You do **not** need Go or any developer tools to run the generator — pick one:
 
 **Download the binary (recommended).** Grab the archive for your OS/arch from the
-[Releases page](https://github.com/cmalafis/openshift-auth/releases), extract it, and run it:
+[Releases page](https://github.com/cmalafis/auth-accelerator/releases), extract it, and run it:
 ```bash
 tar xzf auth-accelerator_*_linux_amd64.tar.gz
 ./auth-accelerator --help
@@ -142,7 +146,7 @@ cmd/                          # cobra CLI — root, generate, list, version (fla
 internal/
   env/      Environment        # the admin's answers + interactive prompt + validation
             OIDCDefaults       # per-IdP OIDC field values, applied via ApplyWiring
-  catalog/  AuthPattern[]      # THE KNOWLEDGE BASE — the IP. Add patterns here.
+  catalog/  AuthPattern[]      # the knowledge base. Add patterns here.
   engine/   Select(env)        # pure, deterministic: pick the first matching pattern
   render/   Generate(...)      # go:embed templates -> rendered artifacts
     templates/*.tmpl
@@ -159,11 +163,17 @@ template — the shared templates stay generic and read `.Env.*`. A pattern that
 
 ## Roadmap
 
-1. **huh** — replace `env.Prompt` with `charmbracelet/huh` for a richer "select what you
-   have" wizard.
-2. **client-go `--from-cluster`** — read `ClusterVersion` (confirm 4.20+), detect the RHBK
+1. **client-go `--from-cluster`** — read `ClusterVersion` (confirm 4.20+), detect the RHBK
    operator, inspect the existing `Authentication` CR, and pre-flight prereqs (trust bundle
    present? CRL/OCSP reachable? break-glass saved?).
-3. **Distribution** — `go:embed` already bundles templates into the binary; ship a static
-   binary for laptops/bastions and a UBI image (`quay.io/cmalafis10/...`) for air-gapped
-   sites.
+2. **PingOne** — a SaaS counterpart to the self-hosted PingFederate pattern.
+
+Done: cobra CLI, the four IdP patterns, the `huh` interactive wizard, golden-snapshot tests,
+and distribution (static binaries + a UBI image via goreleaser).
+
+## License
+
+GPL-3.0-or-later — see [LICENSE](LICENSE). Copyright (C) 2026 Chris Malafis.
+
+Third-party dependencies are vendored under `vendor/` and remain under their own licenses
+(MIT, BSD-3-Clause, Apache-2.0); see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

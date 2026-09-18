@@ -10,8 +10,8 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/cmalafis10/auth-accelerator/internal/catalog"
-	"github.com/cmalafis10/auth-accelerator/internal/env"
+	"github.com/cmalafis/auth-accelerator/internal/catalog"
+	"github.com/cmalafis/auth-accelerator/internal/env"
 )
 
 //go:embed templates/*.tmpl

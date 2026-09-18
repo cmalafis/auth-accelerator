@@ -3,7 +3,7 @@ package engine
 import (
 	"testing"
 
-	"github.com/cmalafis10/auth-accelerator/internal/env"
+	"github.com/cmalafis/auth-accelerator/internal/env"
 )
 
 func TestSelect_RHBKCACOn420(t *testing.T) {

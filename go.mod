@@ -1,4 +1,4 @@
-module github.com/cmalafis10/auth-accelerator
+module github.com/cmalafis/auth-accelerator
 
 go 1.23.0
 

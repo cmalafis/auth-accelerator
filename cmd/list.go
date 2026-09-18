@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/cmalafis10/auth-accelerator/internal/catalog"
+	"github.com/cmalafis/auth-accelerator/internal/catalog"
 )
 
 func newListCmd() *cobra.Command {

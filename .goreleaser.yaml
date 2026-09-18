@@ -14,7 +14,7 @@ builds:
     flags:
       - -mod=vendor
     ldflags:
-      - -s -w -X github.com/cmalafis10/auth-accelerator/cmd.version={{ .Version }}
+      - -s -w -X github.com/cmalafis/auth-accelerator/cmd.version={{ .Version }}
     goos:
       - linux
       - darwin
@@ -34,6 +34,7 @@ archives:
     files:
       - README.md
       - LICENSE
+      - THIRD-PARTY-NOTICES.md
 
 checksum:
   name_template: checksums.txt
@@ -49,6 +50,9 @@ dockers:
     goarch: amd64
     build_flag_templates:
       - "--platform=linux/amd64"
+    extra_files:
+      - LICENSE
+      - THIRD-PARTY-NOTICES.md
   - image_templates:
       - "quay.io/cmalafis10/auth-accelerator:{{ .Version }}-arm64"
     dockerfile: Containerfile
@@ -57,6 +61,9 @@ dockers:
     goarch: arm64
     build_flag_templates:
       - "--platform=linux/arm64"
+    extra_files:
+      - LICENSE
+      - THIRD-PARTY-NOTICES.md
 
 docker_manifests:
   - name_template: "quay.io/cmalafis10/auth-accelerator:{{ .Version }}"
@@ -71,4 +78,4 @@ docker_manifests:
 release:
   github:
     owner: cmalafis
-    name: openshift-auth
+    name: auth-accelerator

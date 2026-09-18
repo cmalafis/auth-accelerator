@@ -2,7 +2,7 @@
 //
 // This is the CLI layer only. The value lives in the internal packages:
 //   - internal/env      the Environment the admin declares
-//   - internal/catalog  the AuthPattern knowledge base (the IP)
+//   - internal/catalog  the AuthPattern knowledge base
 //   - internal/engine   the deterministic Select(env) -> *AuthPattern
 //   - internal/render   go:embed templates -> artifacts
 //
@@ -17,7 +17,7 @@ import (
 )
 
 // version is the default for local/dev builds; releases override it at build
-// time via -ldflags "-X github.com/cmalafis10/auth-accelerator/cmd.version=...".
+// time via -ldflags "-X github.com/cmalafis/auth-accelerator/cmd.version=...".
 var version = "0.1.0"
 
 var rootCmd = &cobra.Command{

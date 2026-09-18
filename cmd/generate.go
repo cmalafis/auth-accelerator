@@ -5,9 +5,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/cmalafis10/auth-accelerator/internal/engine"
-	"github.com/cmalafis10/auth-accelerator/internal/env"
-	"github.com/cmalafis10/auth-accelerator/internal/render"
+	"github.com/cmalafis/auth-accelerator/internal/engine"
+	"github.com/cmalafis/auth-accelerator/internal/env"
+	"github.com/cmalafis/auth-accelerator/internal/render"
 )
 
 func newGenerateCmd() *cobra.Command {

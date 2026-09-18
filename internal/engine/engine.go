@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cmalafis10/auth-accelerator/internal/catalog"
-	"github.com/cmalafis10/auth-accelerator/internal/env"
+	"github.com/cmalafis/auth-accelerator/internal/catalog"
+	"github.com/cmalafis/auth-accelerator/internal/env"
 )
 
 // Select returns the first catalog pattern whose Applies(env) is true.
