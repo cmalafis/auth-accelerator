@@ -1,6 +1,6 @@
 # auth-accelerator — common developer tasks.
 BINARY      := auth-accelerator
-PKG         := github.com/cmalafis10/auth-accelerator
+PKG         := github.com/cmalafis/auth-accelerator
 VERSION     ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS     := -s -w -X $(PKG)/cmd.version=$(VERSION)
 

@@ -9,8 +9,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/cmalafis10/auth-accelerator/internal/engine"
-	"github.com/cmalafis10/auth-accelerator/internal/env"
+	"github.com/cmalafis/auth-accelerator/internal/engine"
+	"github.com/cmalafis/auth-accelerator/internal/env"
 )
 
 // update regenerates the golden files instead of comparing against them.

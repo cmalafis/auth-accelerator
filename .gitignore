@@ -2,3 +2,4 @@ out/
 *.kubeconfig
 auth-accelerator
 /dist/
+.claude/settings.local.json

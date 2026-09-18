@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cmalafis10/auth-accelerator/internal/engine"
-	"github.com/cmalafis10/auth-accelerator/internal/env"
+	"github.com/cmalafis/auth-accelerator/internal/engine"
+	"github.com/cmalafis/auth-accelerator/internal/env"
 )
 
 // renderFor mirrors the CLI flow: select the pattern for e, apply its wiring,

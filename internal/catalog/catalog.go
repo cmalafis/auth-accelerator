@@ -1,13 +1,13 @@
 // Package catalog is the knowledge base: the typed, version-accurate auth
-// topologies. THIS IS THE IP. The decision engine and renderer are plumbing;
-// the value lives in these patterns. Add entries here as you encode more paths.
+// topologies. This is where the value lives; the decision engine and renderer
+// are plumbing. Add entries here as you encode more paths.
 package catalog
 
 import (
 	"strconv"
 	"strings"
 
-	"github.com/cmalafis10/auth-accelerator/internal/env"
+	"github.com/cmalafis/auth-accelerator/internal/env"
 )
 
 // ManifestSpec maps an embedded template to its output filename.

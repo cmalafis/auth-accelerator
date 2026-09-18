@@ -8,7 +8,7 @@
 //   - add a --from-cluster path using k8s.io/client-go to introspect the cluster
 package main
 
-import "github.com/cmalafis10/auth-accelerator/cmd"
+import "github.com/cmalafis/auth-accelerator/cmd"
 
 func main() {
 	cmd.Execute()
